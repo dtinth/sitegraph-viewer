@@ -239,75 +239,17 @@ function createSitegraphViewer(sitegraph: Sitegraph) {
     for (const nodeView of nodeViews.values()) {
       destroyNodeView(nodeView);
     }
+    for (const linkView of linkViews.values()) {
+      destroyLinkView(linkView);
+    }
     circleTemplate.destroy();
     app.destroy();
   };
 }
 function SitegraphViewer({ sitegraph }: { sitegraph: Sitegraph }) {
-  // const [layout, setLayout] = useState<Layout>({
-  //   nodes: [],
-  //   links: [],
-  //   nodeMap: new Map(),
-  // });
-  // const perspective = useStore($perspective);
-
   useEffect(() => {
     return createSitegraphViewer(sitegraph);
   }, [sitegraph]);
 
-  // const projector = (vec: Vec3) =>
-  //   project(
-  //     vec,
-  //     perspective,
-  //     layout.nodeMap.get("HomePage") || { x: 0, y: 0, z: 0 }
-  //   );
-
   return <></>;
-  // return (
-  //   <svg width={1920} height={1080} viewBox={"-960 -540 1920 1080"}>
-  //     <g stroke={"#8b8685"}>
-  //       {layout.links.map((forceLink) => {
-  //         const source = projector(forceLink.source);
-  //         const target = projector(forceLink.target);
-  //         return (
-  //           <line
-  //             key={`${forceLink.index}`}
-  //             x1={source.x}
-  //             y1={source.y}
-  //             x2={target.x}
-  //             y2={target.y}
-  //           />
-  //         );
-  //       })}
-  //     </g>
-  //     {layout.nodes.map((forceNode) => {
-  //       const id = forceNode.id;
-  //       const node = sitegraph.nodes[id];
-  //       const { x, y } = projector(forceNode);
-  //       if (!node) return null;
-  //       return <SitegraphNodeView key={id} id={id} node={node} x={x} y={y} />;
-  //     })}
-  //   </svg>
-  // );
 }
-
-// interface SitegraphNodeView {
-//   id: string;
-//   node: SitegraphNode;
-//   x: number;
-//   y: number;
-// }
-
-// function SitegraphNodeView(props: SitegraphNodeView) {
-//   const { id, x, y } = props;
-//   return (
-//     <g fill="#fff">
-//       <circle cx={x} cy={y} r={3} />
-//       {!id.startsWith("2") && (
-//         <text x={x + 3} y={y + 10} font-size={10}>
-//           {id}
-//         </text>
-//       )}
-//     </g>
-//   );
-// }
