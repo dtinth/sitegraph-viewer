@@ -6,6 +6,7 @@ import { ForceLink, ForceNode, createLayouter } from "./Layout";
 import { Orbit } from "./Orbit";
 import { Vec3 } from "./Vec3";
 import { Vec2 } from "./Vec2";
+import { project } from "./project";
 
 const $perspective = atom<Orbit>({ rotateX: 0, rotateY: 0 });
 let target = { rotateX: 0, rotateY: 0 };
@@ -25,37 +26,6 @@ requestAnimationFrame(function loop() {
   });
   requestAnimationFrame(loop);
 });
-const rotateX = (vec: Vec3, angle: number) => {
-  const cos = Math.cos(angle);
-  const sin = Math.sin(angle);
-  const y = vec.y * cos - vec.z * sin;
-  const z = vec.y * sin + vec.z * cos;
-  return { ...vec, y, z };
-};
-const rotateY = (vec: Vec3, angle: number) => {
-  const cos = Math.cos(angle);
-  const sin = Math.sin(angle);
-  const x = vec.x * cos - vec.z * sin;
-  const z = vec.x * sin + vec.z * cos;
-  return { ...vec, x, z };
-};
-const project = (vec: Vec3, perspective: Orbit, anchor: Vec3) => {
-  vec = {
-    x: vec.x - anchor.x,
-    y: vec.y - anchor.y,
-    z: vec.z - anchor.z,
-  };
-  vec = rotateY(vec, perspective.rotateY);
-  vec = rotateX(vec, perspective.rotateX);
-  const scale = 3;
-  vec.x += anchor.x;
-  vec.y += anchor.y;
-  vec.z += anchor.z;
-  vec.x *= scale;
-  vec.y *= scale;
-  vec.z *= scale;
-  return vec;
-};
 interface NodeView {
   group: PIXI.Container;
   circle: PIXI.Graphics;
