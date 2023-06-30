@@ -3,12 +3,11 @@ import * as PIXI from "pixi.js";
 import { atom } from "nanostores";
 import { useEffect } from "preact/hooks";
 import { ForceLink, ForceNode, createLayouter } from "./Layout";
+import { Orbit } from "./Orbit";
+import { Vec3 } from "./Vec3";
+import { Vec2 } from "./Vec2";
 
 const $perspective = atom<Orbit>({ rotateX: 0, rotateY: 0 });
-interface Orbit {
-  rotateX: number;
-  rotateY: number;
-}
 let target = { rotateX: 0, rotateY: 0 };
 window.addEventListener("mousemove", (e) => {
   target = {
@@ -26,11 +25,6 @@ requestAnimationFrame(function loop() {
   });
   requestAnimationFrame(loop);
 });
-interface Vec3 {
-  x: number;
-  y: number;
-  z: number;
-}
 const rotateX = (vec: Vec3, angle: number) => {
   const cos = Math.cos(angle);
   const sin = Math.sin(angle);
@@ -83,7 +77,6 @@ function createNodeView(
   group.addChild(text);
   return nodeView;
 }
-type Vec2 = { x: number; y: number };
 type Projector = (vec: Vec3) => Vec2;
 function updateNodeView(nodeView: NodeView, vm: NodeViewModel) {
   const { group } = nodeView;
