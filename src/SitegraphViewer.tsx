@@ -1,6 +1,6 @@
 import { Sitegraph } from "./Sitegraph";
 import * as PIXI from "pixi.js";
-import { atom } from "nanostores";
+import { atom, computed } from "nanostores";
 import { useEffect } from "preact/hooks";
 import { ForceLink, ForceNode, createLayouter } from "./Layout";
 import { Orbit } from "./Orbit";
@@ -60,33 +60,38 @@ function setupCamera(app: PIXI.Application) {
     dragging = null;
   });
 
-  app.ticker.add(() => {
+  const update = () => {
     const perspective = $perspective.get();
     const tx = hover.rotateX + drag.rotateX;
     const ty = hover.rotateY + drag.rotateY;
     const dx = tx - perspective.rotateX;
     const dy = ty - perspective.rotateY;
-    $perspective.set({
-      rotateX: perspective.rotateX + dx / 10,
-      rotateY: perspective.rotateY + dy / 10,
-    });
-  });
-  return { $perspective };
+    if (Math.abs(dx) > 0.0001 || Math.abs(dy) > 0.0001) {
+      $perspective.set({
+        rotateX: perspective.rotateX + dx / 10,
+        rotateY: perspective.rotateY + dy / 10,
+      });
+    }
+  };
+  return { $perspective, update };
 }
 
 function createSitegraphViewer(sitegraph: Sitegraph) {
+  let stopped = false;
   let app = new PIXI.Application<HTMLCanvasElement>({
     resizeTo: window,
     autoDensity: true,
     antialias: true,
     resolution: window.devicePixelRatio,
+    sharedTicker: false,
+    autoStart: false,
   });
   document.body.appendChild(app.view);
   app.view.style.position = "fixed";
   app.view.style.top = "0";
   app.view.style.left = "0";
 
-  const { $perspective } = setupCamera(app);
+  const camera = setupCamera(app);
 
   const circleTemplate = new PIXI.Graphics();
   circleTemplate.beginFill(16777215);
@@ -124,46 +129,75 @@ function createSitegraphViewer(sitegraph: Sitegraph) {
     nodeGroup.addChild(nodeView.group);
   }
 
-  const update = () => {
-    app.stage.x = window.innerWidth / 2;
-    app.stage.y = window.innerHeight / 2;
+  const $width = atom(window.innerWidth);
+  const $height = atom(window.innerHeight);
 
-    const layout = layouter.$layout.get();
-    const projector: Projector = (vec) => {
-      const focusTarget: Vec3 = layout.nodeMap.get($focus.get()) || {
-        x: 0,
-        y: 0,
-        z: 0,
+  const $update = computed(
+    [$width, $height, layouter.$layout, camera.$perspective, $focus],
+    (width, height, layout, perspective, focus) => {
+      let ran = false;
+      return (markDirty: () => void) => {
+        if (ran) return;
+        ran = true;
+
+        app.stage.x = width / 2;
+        app.stage.y = height / 2;
+
+        const projector: Projector = (vec) => {
+          const focusTarget: Vec3 = layout.nodeMap.get(focus) || {
+            x: 0,
+            y: 0,
+            z: 0,
+          };
+          const projected = project(vec, perspective, focusTarget);
+          return projected;
+        };
+
+        for (const node of layout.nodes) {
+          const nodeViewModel = nodeViewModels.get(node);
+          if (!nodeViewModel) continue;
+          updateNodeViewModel(nodeViewModel, node, projector);
+        }
+
+        for (const link of layout.links) {
+          const linkView = linkViews.get(link);
+          if (!linkView) continue;
+          updateLinkView(linkView, link, projector);
+        }
+
+        for (const node of layout.nodes) {
+          const nodeView = nodeViews.get(node);
+          const nodeViewModel = nodeViewModels.get(node);
+          if (!nodeView || !nodeViewModel) continue;
+          updateNodeView(nodeView, nodeViewModel);
+        }
+
+        markDirty();
       };
-      const projected = project(vec, $perspective.get(), focusTarget);
-      return projected;
-    };
-
-    for (const node of layout.nodes) {
-      const nodeViewModel = nodeViewModels.get(node);
-      if (!nodeViewModel) continue;
-      updateNodeViewModel(nodeViewModel, node, projector);
     }
+  );
 
-    for (const link of layout.links) {
-      const linkView = linkViews.get(link);
-      if (!linkView) continue;
-      updateLinkView(linkView, link, projector);
-    }
-
-    for (const node of layout.nodes) {
-      const nodeView = nodeViews.get(node);
-      const nodeViewModel = nodeViewModels.get(node);
-      if (!nodeView || !nodeViewModel) continue;
-      updateNodeView(nodeView, nodeViewModel);
-    }
+  const update = () => {
+    let dirty = false;
+    const markDirty = () => (dirty = true);
+    camera.update();
+    $width.set(window.innerWidth);
+    $height.set(window.innerHeight);
+    $update.get()(markDirty);
+    if (dirty) app.render();
   };
-  update();
-  app.ticker.add(update);
+
+  const frame = () => {
+    if (stopped) return;
+    requestAnimationFrame(frame);
+    update();
+  };
+
+  frame();
 
   return () => {
+    stopped = true;
     app.view.remove();
-    app.ticker.remove(update);
     for (const nodeView of nodeViews.values()) {
       destroyNodeView(nodeView);
     }
