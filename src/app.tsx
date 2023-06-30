@@ -10,8 +10,7 @@ import {
   forceLink,
   forceCenter,
 } from "d3-force-3d";
-
-const $sitegraph = atom<Sitegraph | undefined>();
+import { $sitegraph } from "./$sitegraph";
 
 interface Orbit {
   rotateX: number;
@@ -73,19 +72,6 @@ const project = (vec: Vec3, perspective: Orbit, anchor: Vec3) => {
   vec.z *= scale;
   return vec;
 };
-
-fetch(
-  "https://htrqhjrmmqrqaccchyne.supabase.co/storage/v1/object/public/notes-public/index.graph.json"
-)
-  .then((r) => {
-    if (!r.ok) {
-      throw new Error(`Failed to fetch sitegraph: ${r.status} ${r.statusText}`);
-    }
-    return r.json();
-  })
-  .then((data) => {
-    $sitegraph.set(Sitegraph.parse(data));
-  });
 
 export function App() {
   const sitegraph = useStore($sitegraph);
