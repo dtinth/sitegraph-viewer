@@ -235,7 +235,12 @@ function createSitegraphViewer(sitegraph: Sitegraph) {
       clickGesture.pointerId === e.pointerId &&
       Math.hypot(e.global.x - clickGesture.x, e.global.y - clickGesture.y) < 10
     ) {
-      $focus.set(clickGesture.id);
+      if ($focus.get() === clickGesture.id) {
+        const url = "https://notes.dt.in.th/" + clickGesture.id;
+        window.open(url, "_blank");
+      } else {
+        $focus.set(clickGesture.id);
+      }
     }
     clickGesture = undefined;
   });
