@@ -24,9 +24,13 @@ export function createNodeView(
   return nodeView;
 }
 export function updateNodeView(nodeView: NodeView, vm: NodeViewModel) {
-  const { group } = nodeView;
+  const { group, circle, text } = nodeView;
   group.x = vm.x;
   group.y = vm.y;
+  const tint = vm.focus ? 0xd7fc70 : 0xffffff;
+  circle.tint = tint;
+  text.tint = tint;
+  group.zIndex = vm.focus ? 3 : 0;
 }
 export function destroyNodeView(nodeView: NodeView) {
   nodeView.group.destroy();

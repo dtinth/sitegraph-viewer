@@ -23,9 +23,10 @@ import {
   createNodeViewModel,
   updateNodeViewModel,
 } from "./NodeViewModel";
-import { Vec3 } from "./Vec3";
 
 const $focus = atom("HomePage");
+
+Object.assign(window, { $focus });
 
 function setupCamera(app: PIXI.Application) {
   let hover: Orbit = { rotateX: 0, rotateY: 0 };
@@ -132,9 +133,48 @@ function createSitegraphViewer(sitegraph: Sitegraph) {
   const $width = atom(window.innerWidth);
   const $height = atom(window.innerHeight);
 
+  const focuser = (() => {
+    const $focusTarget = computed(
+      [$focus, layouter.$layout],
+      (focus, layout) =>
+        layout.nodeMap.get(focus) || {
+          x: 0,
+          y: 0,
+          z: 0,
+        }
+    );
+    const $anchor = atom($focusTarget.get());
+    const update = () => {
+      const focusTarget = $focusTarget.get();
+      const anchor = $anchor.get();
+      const dx = focusTarget.x - anchor.x;
+      const dy = focusTarget.y - anchor.y;
+      const dz = focusTarget.z - anchor.z;
+      if (
+        Math.abs(dx) > 0.0001 ||
+        Math.abs(dy) > 0.0001 ||
+        Math.abs(dz) > 0.0001
+      ) {
+        $anchor.set({
+          x: anchor.x + dx / 10,
+          y: anchor.y + dy / 10,
+          z: anchor.z + dz / 10,
+        });
+      }
+    };
+    return { $anchor, update };
+  })();
+
   const $update = computed(
-    [$width, $height, layouter.$layout, camera.$perspective, $focus],
-    (width, height, layout, perspective, focus) => {
+    [
+      $width,
+      $height,
+      layouter.$layout,
+      camera.$perspective,
+      $focus,
+      focuser.$anchor,
+    ],
+    (width, height, layout, perspective, focus, anchor) => {
       let ran = false;
       return (markDirty: () => void) => {
         if (ran) return;
@@ -144,19 +184,14 @@ function createSitegraphViewer(sitegraph: Sitegraph) {
         app.stage.y = height / 2;
 
         const projector: Projector = (vec) => {
-          const focusTarget: Vec3 = layout.nodeMap.get(focus) || {
-            x: 0,
-            y: 0,
-            z: 0,
-          };
-          const projected = project(vec, perspective, focusTarget);
+          const projected = project(vec, perspective, anchor);
           return projected;
         };
 
         for (const node of layout.nodes) {
           const nodeViewModel = nodeViewModels.get(node);
           if (!nodeViewModel) continue;
-          updateNodeViewModel(nodeViewModel, node, projector);
+          updateNodeViewModel(nodeViewModel, node, projector, focus);
         }
 
         for (const link of layout.links) {
@@ -181,6 +216,7 @@ function createSitegraphViewer(sitegraph: Sitegraph) {
     let dirty = false;
     const markDirty = () => (dirty = true);
     camera.update();
+    focuser.update();
     $width.set(window.innerWidth);
     $height.set(window.innerHeight);
     $update.get()(markDirty);
