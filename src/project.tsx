@@ -24,9 +24,6 @@ export const project = (vec: Vec3, perspective: Orbit, anchor: Vec3) => {
   vec = rotateY(vec, perspective.rotateY);
   vec = rotateX(vec, perspective.rotateX);
   const scale = 3;
-  vec.x += anchor.x;
-  vec.y += anchor.y;
-  vec.z += anchor.z;
   vec.x *= scale;
   vec.y *= scale;
   vec.z *= scale;

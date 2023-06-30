@@ -27,23 +27,6 @@ import { Vec3 } from "./Vec3";
 
 const $focus = atom("HomePage");
 
-// window.addEventListener("mousemove", (e) => {
-//   target = {
-//     rotateX: (e.clientY - window.innerHeight / 2) / 1000,
-//     rotateY: (e.clientX - window.innerWidth / 2) / 1000,
-//   };
-// });
-// requestAnimationFrame(function loop() {
-//   const perspective = $perspective.get();
-//   const dx = target.rotateX - perspective.rotateX;
-//   const dy = target.rotateY - perspective.rotateY;
-//   $perspective.set({
-//     rotateX: perspective.rotateX + dx / 10,
-//     rotateY: perspective.rotateY + dy / 10,
-//   });
-//   requestAnimationFrame(loop);
-// });
-
 function setupCamera(app: PIXI.Application) {
   let hover: Orbit = { rotateX: 0, rotateY: 0 };
   let drag: Orbit = { rotateX: 0, rotateY: 0 };
