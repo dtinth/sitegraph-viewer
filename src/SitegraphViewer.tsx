@@ -23,6 +23,7 @@ import {
   createNodeViewModel,
   updateNodeViewModel,
 } from "./NodeViewModel";
+import { createPath, createPathFinder } from "./createPathFinder";
 
 const $focus = atom("HomePage");
 
@@ -44,9 +45,11 @@ function setupCamera(app: PIXI.Application) {
   });
 
   let dragging: { lastX: number; lastY: number; id: number } | null = null;
+
   app.stage.on("pointerdown", (e) => {
     dragging = { lastX: e.global.x, lastY: e.global.y, id: e.pointerId };
   });
+
   app.stage.on("globalpointermove", (e) => {
     if (!dragging || e.pointerId !== dragging.id) return;
     const { lastX, lastY } = dragging;
@@ -78,6 +81,29 @@ function setupCamera(app: PIXI.Application) {
 }
 
 function createSitegraphViewer(sitegraph: Sitegraph) {
+  const fromHome = createPathFinder(sitegraph, "HomePage");
+
+  const $hoverNodeId = atom<string | undefined>($focus.get());
+  const $pathFinderFromFocus = computed($focus, (focus) =>
+    createPathFinder(sitegraph, focus)
+  );
+  const $pathFromFocusToHover = computed(
+    [$hoverNodeId, $pathFinderFromFocus],
+    (hoverNodeId, pathFinderFromFocus) =>
+      createPath(hoverNodeId ? pathFinderFromFocus.getPathTo(hoverNodeId) : [])
+  );
+  const $forwardLinks = computed([$focus], (focus) => {
+    return new Set((sitegraph.nodes[focus]?.links || []).map((x) => x.link));
+  });
+  const $backLinks = computed([$focus], (focus) => {
+    return new Set(
+      Object.entries(sitegraph.nodes).flatMap(([id, node]) => {
+        if (node.links?.some((x) => x.link === focus)) return [id];
+        return [];
+      })
+    );
+  });
+
   let stopped = false;
   let app = new PIXI.Application<HTMLCanvasElement>({
     resizeTo: window,
@@ -165,6 +191,55 @@ function createSitegraphViewer(sitegraph: Sitegraph) {
     return { $anchor, update };
   })();
 
+  const $pathFromHomeToFocus = computed([$focus], (focus) =>
+    createPath(fromHome.getPathTo(focus))
+  );
+
+  app.stage.on("globalmousemove", (e) => {
+    let closest: { id: string; distance: number } | undefined;
+    for (const [node, vm] of nodeViewModels) {
+      const distance = Math.hypot(
+        e.global.x - $width.get() / 2 - vm.x,
+        e.global.y - $height.get() / 2 - vm.y
+      );
+      if (distance < 32 && (!closest || distance < closest.distance)) {
+        closest = { id: node.id, distance };
+      }
+    }
+    if (closest !== undefined) {
+      $hoverNodeId.set(closest.id);
+    } else {
+      $hoverNodeId.set(undefined);
+    }
+  });
+
+  let clickGesture:
+    | { id: string; pointerId: number; x: number; y: number }
+    | undefined;
+  app.stage.on("pointerdown", (e) => {
+    const hoverId = $hoverNodeId.get();
+    if (!clickGesture && hoverId) {
+      clickGesture = {
+        id: hoverId,
+        pointerId: e.pointerId,
+        x: e.global.x,
+        y: e.global.y,
+      };
+    }
+  });
+  app.stage.on("pointerup", (e) => {
+    if (
+      clickGesture &&
+      clickGesture.pointerId === e.pointerId &&
+      Math.hypot(e.global.x - clickGesture.x, e.global.y - clickGesture.y) < 10
+    ) {
+      $focus.set(clickGesture.id);
+    }
+    clickGesture = undefined;
+  });
+
+  $hoverNodeId.subscribe((x) => console.log("hoverNodeId", x));
+
   const $update = computed(
     [
       $width,
@@ -173,8 +248,25 @@ function createSitegraphViewer(sitegraph: Sitegraph) {
       camera.$perspective,
       $focus,
       focuser.$anchor,
+      $pathFromHomeToFocus,
+      $pathFromFocusToHover,
+      $hoverNodeId,
+      $forwardLinks,
+      $backLinks,
     ],
-    (width, height, layout, perspective, focus, anchor) => {
+    (
+      width,
+      height,
+      layout,
+      perspective,
+      focus,
+      anchor,
+      pathFromHomeToFocus,
+      pathFromFocusToHover,
+      hoverNodeId,
+      forwardLinks,
+      backLinks
+    ) => {
       let ran = false;
       return (markDirty: () => void) => {
         if (ran) return;
@@ -191,13 +283,32 @@ function createSitegraphViewer(sitegraph: Sitegraph) {
         for (const node of layout.nodes) {
           const nodeViewModel = nodeViewModels.get(node);
           if (!nodeViewModel) continue;
-          updateNodeViewModel(nodeViewModel, node, projector, focus);
+          updateNodeViewModel(
+            nodeViewModel,
+            node,
+            projector,
+            focus,
+            hoverNodeId,
+            pathFromHomeToFocus,
+            pathFromFocusToHover,
+            forwardLinks,
+            backLinks
+          );
         }
 
         for (const link of layout.links) {
           const linkView = linkViews.get(link);
           if (!linkView) continue;
-          updateLinkView(linkView, link, projector);
+          updateLinkView(
+            linkView,
+            link,
+            projector,
+            pathFromHomeToFocus,
+            pathFromFocusToHover,
+            focus,
+            forwardLinks,
+            backLinks
+          );
         }
 
         for (const node of layout.nodes) {

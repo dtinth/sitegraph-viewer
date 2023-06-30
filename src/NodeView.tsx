@@ -16,8 +16,10 @@ export function createNodeView(
   const text = new PIXI.Text(node.id, {
     fontFamily: "sans-serif",
     fontSize: 10,
-    fill: 16777215,
+    fill: 0xffffff,
   });
+  text.x = 5;
+  text.y = 2;
   const nodeView: NodeView = { group, circle, text };
   group.addChild(circle);
   group.addChild(text);
@@ -27,10 +29,12 @@ export function updateNodeView(nodeView: NodeView, vm: NodeViewModel) {
   const { group, circle, text } = nodeView;
   group.x = vm.x;
   group.y = vm.y;
-  const tint = vm.focus ? 0xd7fc70 : 0xffffff;
-  circle.tint = tint;
-  text.tint = tint;
-  group.zIndex = vm.focus ? 3 : 0;
+  circle.scale.x = vm.scale;
+  circle.scale.y = vm.scale;
+  circle.tint = vm.tint;
+  text.tint = vm.tint;
+  group.zIndex = vm.zIndex;
+  text.visible = vm.showText;
 }
 export function destroyNodeView(nodeView: NodeView) {
   nodeView.group.destroy();
