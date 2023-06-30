@@ -11,6 +11,7 @@ export function createLinkView(
 ): LinkView {
   const group = new PIXI.Container();
   const rectangle = new PIXI.Graphics(rectangleTemplate);
+  rectangle.tint = 0x8b8685;
   const linkView: LinkView = { group, rectangle };
   group.addChild(rectangle);
   return linkView;
