@@ -1,7 +1,7 @@
 import { Sitegraph, SitegraphNode } from "./Sitegraph";
 
-function cost(from: SitegraphNode, to: SitegraphNode) {
-  return from.links.length;
+function cost(from: SitegraphNode, _to: SitegraphNode) {
+  return from.links.length * (from.title?.endsWith("(topic)") ? 0.1 : 1);
 }
 
 interface BestPath {
