@@ -31,8 +31,8 @@ const $focus = atom("HomePage");
 let target = { rotateX: 0, rotateY: 0 };
 window.addEventListener("mousemove", (e) => {
   target = {
-    rotateX: (e.clientY / window.innerHeight - 0.5) / 2,
-    rotateY: (e.clientX / window.innerWidth - 0.5) / 2,
+    rotateX: (e.clientY - window.innerHeight / 2) / 1000,
+    rotateY: (e.clientX - window.innerWidth / 2) / 1000,
   };
 });
 requestAnimationFrame(function loop() {
