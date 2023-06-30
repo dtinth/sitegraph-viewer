@@ -198,27 +198,13 @@ function createSitegraphViewer(sitegraph: Sitegraph) {
   );
 
   app.stage.on("globalmousemove", (e) => {
-    let closest: { id: string; distance: number } | undefined;
-    for (const [node, vm] of nodeViewModels) {
-      const distance = Math.hypot(
-        e.global.x - $width.get() / 2 - vm.x,
-        e.global.y - $height.get() / 2 - vm.y
-      );
-      if (distance < 32 && (!closest || distance < closest.distance)) {
-        closest = { id: node.id, distance };
-      }
-    }
-    if (closest !== undefined) {
-      $hoverNodeId.set(closest.id);
-    } else {
-      $hoverNodeId.set(undefined);
-    }
+    updateHover(e);
   });
-
   let clickGesture:
     | { id: string; pointerId: number; x: number; y: number }
     | undefined;
   app.stage.on("pointerdown", (e) => {
+    updateHover(e);
     const hoverId = $hoverNodeId.get();
     if (!clickGesture && hoverId) {
       clickGesture = {
@@ -361,6 +347,24 @@ function createSitegraphViewer(sitegraph: Sitegraph) {
     circleTemplate.destroy();
     app.destroy();
   };
+
+  function updateHover(e: PIXI.FederatedPointerEvent) {
+    let closest: { id: string; distance: number } | undefined;
+    for (const [node, vm] of nodeViewModels) {
+      const distance = Math.hypot(
+        e.global.x - $width.get() / 2 - vm.x,
+        e.global.y - $height.get() / 2 - vm.y
+      );
+      if (distance < 32 && (!closest || distance < closest.distance)) {
+        closest = { id: node.id, distance };
+      }
+    }
+    if (closest !== undefined) {
+      $hoverNodeId.set(closest.id);
+    } else {
+      $hoverNodeId.set(undefined);
+    }
+  }
 }
 export function SitegraphViewer({ sitegraph }: { sitegraph: Sitegraph }) {
   useEffect(() => {
