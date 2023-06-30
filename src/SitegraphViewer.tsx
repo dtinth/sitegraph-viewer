@@ -4,7 +4,7 @@ import { atom, computed } from "nanostores";
 import { useEffect } from "preact/hooks";
 import { ForceLink, ForceNode, createLayouter } from "./Layout";
 import { Orbit } from "./Orbit";
-import { project } from "./project";
+import { Trackball, project, rotateX, rotateY } from "./project";
 import { Projector } from "./Projector";
 import {
   NodeView,
@@ -31,7 +31,11 @@ Object.assign(window, { $focus });
 
 function setupCamera(app: PIXI.Application) {
   let hover: Orbit = { rotateX: 0, rotateY: 0 };
-  let drag: Orbit = { rotateX: 0, rotateY: 0 };
+  const $trackball = atom<Trackball>({
+    x: { x: 1, y: 0, z: 0 },
+    y: { x: 0, y: 1, z: 0 },
+    z: { x: 0, y: 0, z: 1 },
+  });
   const $perspective = atom<Orbit>({ rotateX: 0, rotateY: 0 });
   app.stage.interactive = true;
   app.stage.interactiveChildren = false;
@@ -45,18 +49,20 @@ function setupCamera(app: PIXI.Application) {
   });
 
   let dragging: { lastX: number; lastY: number; id: number } | null = null;
-
   app.stage.on("pointerdown", (e) => {
     dragging = { lastX: e.global.x, lastY: e.global.y, id: e.pointerId };
   });
-
   app.stage.on("globalpointermove", (e) => {
     if (!dragging || e.pointerId !== dragging.id) return;
     const { lastX, lastY } = dragging;
     const dx = e.global.x - lastX;
     const dy = e.global.y - lastY;
-    drag.rotateX += dy / 100;
-    drag.rotateY += dx / 100;
+    const trackball = $trackball.get();
+    $trackball.set({
+      x: rotateX(rotateY(trackball.x, dx / 100), dy / 100),
+      y: rotateX(rotateY(trackball.y, dx / 100), dy / 100),
+      z: rotateX(rotateY(trackball.z, dx / 100), dy / 100),
+    });
     dragging.lastX = e.global.x;
     dragging.lastY = e.global.y;
   });
@@ -66,8 +72,8 @@ function setupCamera(app: PIXI.Application) {
 
   const update = () => {
     const perspective = $perspective.get();
-    const tx = hover.rotateX + drag.rotateX;
-    const ty = hover.rotateY + drag.rotateY;
+    const tx = hover.rotateX;
+    const ty = hover.rotateY;
     const dx = tx - perspective.rotateX;
     const dy = ty - perspective.rotateY;
     if (Math.abs(dx) > 0.0001 || Math.abs(dy) > 0.0001) {
@@ -77,7 +83,7 @@ function setupCamera(app: PIXI.Application) {
       });
     }
   };
-  return { $perspective, update };
+  return { $perspective, $trackball, update };
 }
 
 function createSitegraphViewer(sitegraph: Sitegraph) {
@@ -239,6 +245,7 @@ function createSitegraphViewer(sitegraph: Sitegraph) {
       $height,
       layouter.$layout,
       camera.$perspective,
+      camera.$trackball,
       $focus,
       focuser.$anchor,
       $pathFromHomeToFocus,
@@ -252,6 +259,7 @@ function createSitegraphViewer(sitegraph: Sitegraph) {
       height,
       layout,
       perspective,
+      trackball,
       focus,
       anchor,
       pathFromHomeToFocus,
@@ -269,7 +277,7 @@ function createSitegraphViewer(sitegraph: Sitegraph) {
         app.stage.y = height / 2;
 
         const projector: Projector = (vec) => {
-          const projected = project(vec, perspective, anchor);
+          const projected = project(vec, perspective, trackball, anchor);
           return projected;
         };
 
