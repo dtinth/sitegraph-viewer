@@ -47,5 +47,12 @@ export const project = (
   vec.x *= scale;
   vec.y *= scale;
   vec.z *= scale;
+
+  // Perspective projection
+  const viewDistance = 8192;
+  const factor = viewDistance / (viewDistance + vec.z);
+  vec.x *= factor;
+  vec.y *= factor;
+
   return vec;
 };
