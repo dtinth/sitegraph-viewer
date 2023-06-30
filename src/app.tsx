@@ -1,22 +1,18 @@
 import { Sitegraph, SitegraphNode } from "./Sitegraph";
 import "./app.css";
+import * as PIXI from "pixi.js";
 
 import { atom } from "nanostores";
 import { useStore } from "@nanostores/preact";
 import { useEffect, useState } from "preact/hooks";
-import {
-  forceSimulation,
-  forceManyBody,
-  forceLink,
-  forceCenter,
-} from "d3-force-3d";
 import { $sitegraph } from "./$sitegraph";
+import { ForceLink, ForceNode, Layout, createLayouter } from "./Layout";
 
+const $perspective = atom<Orbit>({ rotateX: 0, rotateY: 0 });
 interface Orbit {
   rotateX: number;
   rotateY: number;
 }
-const $perspective = atom<Orbit>({ rotateX: 0, rotateY: 0 });
 let target = { rotateX: 0, rotateY: 0 };
 window.addEventListener("mousemove", (e) => {
   target = {
@@ -79,110 +75,239 @@ export function App() {
   return <SitegraphViewer sitegraph={sitegraph} />;
 }
 
-function SitegraphViewer({ sitegraph }: { sitegraph: Sitegraph }) {
-  interface ForceNode {
-    id: string;
-    x: number;
-    y: number;
-    z: number;
+interface NodeView {
+  group: PIXI.Container;
+  circle: PIXI.Graphics;
+  text: PIXI.Text;
+}
+function createNodeView(
+  circleTemplate: PIXI.Graphics,
+  node: ForceNode
+): NodeView {
+  const group = new PIXI.Container();
+  const circle = new PIXI.Graphics(circleTemplate.geometry);
+  const text = new PIXI.Text(node.id, {
+    fontFamily: "sans-serif",
+    fontSize: 10,
+    fill: 0xffffff,
+  });
+  const nodeView: NodeView = { group, circle, text };
+  group.addChild(circle);
+  group.addChild(text);
+  return nodeView;
+}
+
+type Vec2 = { x: number; y: number };
+type Projector = (vec: Vec3) => Vec2;
+
+function updateNodeView(nodeView: NodeView, vm: NodeViewModel) {
+  const { group } = nodeView;
+  group.x = vm.x;
+  group.y = vm.y;
+}
+function destroyNodeView(nodeView: NodeView) {
+  nodeView.group.destroy();
+}
+
+interface LinkView {
+  group: PIXI.Container;
+  rectangle: PIXI.Graphics;
+}
+function createLinkView(rectangleTemplate: PIXI.GraphicsGeometry): LinkView {
+  const group = new PIXI.Container();
+  const rectangle = new PIXI.Graphics(rectangleTemplate);
+  const linkView: LinkView = { group, rectangle };
+  group.addChild(rectangle);
+  return linkView;
+}
+function updateLinkView(
+  linkView: LinkView,
+  link: ForceLink,
+  projector: Projector
+) {
+  const { group } = linkView;
+  const source = link.source;
+  const target = link.target;
+  if (!source || !target) return;
+  const projectedSource = projector(source);
+  const projectedTarget = projector(target);
+  const dx = projectedTarget.x - projectedSource.x;
+  const dy = projectedTarget.y - projectedSource.y;
+  const angle = Math.atan2(dy, dx);
+  const length = Math.sqrt(dx * dx + dy * dy);
+  group.x = projectedSource.x + dx / 2;
+  group.y = projectedSource.y + dy / 2;
+  group.rotation = angle;
+  group.scale.x = length;
+}
+function destroyLinkView(linkView: LinkView) {
+  linkView.group.destroy();
+}
+
+interface NodeViewModel extends Vec2 {}
+function createNodeViewModel(): NodeViewModel {
+  return { x: 0, y: 0 };
+}
+function updateNodeViewModel(
+  vm: NodeViewModel,
+  node: ForceNode,
+  projector: Projector
+) {
+  const vec = projector(node);
+  vm.x = vec.x;
+  vm.y = vec.y;
+}
+
+function createSitegraphViewer(sitegraph: Sitegraph) {
+  let app = new PIXI.Application<HTMLCanvasElement>({
+    resizeTo: window,
+    autoDensity: true,
+    antialias: true,
+    resolution: window.devicePixelRatio,
+  });
+  document.body.appendChild(app.view);
+  app.view.style.position = "fixed";
+  app.view.style.top = "0";
+  app.view.style.left = "0";
+
+  const circleTemplate = new PIXI.Graphics();
+  circleTemplate.beginFill(0xffffff);
+  circleTemplate.drawCircle(0, 0, 3);
+  circleTemplate.endFill();
+
+  const rectangleTemplate = new PIXI.Graphics();
+  rectangleTemplate.beginFill(0xffffff);
+  rectangleTemplate.drawRect(-0.5, -0.5, 1, 1);
+  rectangleTemplate.endFill();
+
+  const layouter = createLayouter(sitegraph);
+  const nodeViewModels = new Map<ForceNode, NodeViewModel>();
+  const nodeViews = new Map<ForceNode, NodeView>();
+  const linkViews = new Map<ForceLink, LinkView>();
+  for (const link of layouter.$layout.get().links) {
+    const linkView: LinkView = createLinkView(rectangleTemplate.geometry);
+    linkViews.set(link, linkView);
+    app.stage.addChild(linkView.group);
   }
-  interface ForceLink {
-    source: ForceNode;
-    target: ForceNode;
-    index: number;
-  }
-  interface Layout {
-    nodes: ForceNode[];
-    links: ForceLink[];
-    nodeMap: Map<string, ForceNode>;
+  for (const node of layouter.$layout.get().nodes) {
+    const nodeViewModel = createNodeViewModel();
+    const nodeView = createNodeView(circleTemplate, node);
+    nodeViews.set(node, nodeView);
+    nodeViewModels.set(node, nodeViewModel);
+    app.stage.addChild(nodeView.group);
   }
 
-  const [layout, setLayout] = useState<Layout>({
-    nodes: [],
-    links: [],
-    nodeMap: new Map(),
-  });
-  const perspective = useStore($perspective);
+  const update = () => {
+    app.stage.x = window.innerWidth / 2;
+    app.stage.y = window.innerHeight / 2;
+
+    const layout = layouter.$layout.get();
+    const projector: Projector = (vec) => {
+      const projected = project(
+        vec,
+        $perspective.get(),
+        layout.nodeMap.get("HomePage") || { x: 0, y: 0, z: 0 }
+      );
+      return projected;
+    };
+
+    for (const node of layout.nodes) {
+      const nodeViewModel = nodeViewModels.get(node);
+      if (!nodeViewModel) continue;
+      updateNodeViewModel(nodeViewModel, node, projector);
+    }
+
+    for (const link of layout.links) {
+      const linkView = linkViews.get(link);
+      if (!linkView) continue;
+      updateLinkView(linkView, link, projector);
+    }
+
+    for (const node of layout.nodes) {
+      const nodeView = nodeViews.get(node);
+      const nodeViewModel = nodeViewModels.get(node);
+      if (!nodeView || !nodeViewModel) continue;
+      updateNodeView(nodeView, nodeViewModel);
+    }
+  };
+  update();
+  app.ticker.add(update);
+
+  return () => {
+    app.view.remove();
+    app.ticker.remove(update);
+    for (const nodeView of nodeViews.values()) {
+      destroyNodeView(nodeView);
+    }
+    circleTemplate.destroy();
+    app.destroy();
+  };
+}
+function SitegraphViewer({ sitegraph }: { sitegraph: Sitegraph }) {
+  // const [layout, setLayout] = useState<Layout>({
+  //   nodes: [],
+  //   links: [],
+  //   nodeMap: new Map(),
+  // });
+  // const perspective = useStore($perspective);
 
   useEffect(() => {
-    const nodes = Object.entries(sitegraph.nodes).map(([id]) => {
-      return { id } as ForceNode;
-    });
-    const nodeMap = new Map(nodes.map((node) => [node.id, node]));
-    const links = Object.entries(sitegraph.nodes).flatMap(
-      ([sourceId, sourceNode]) => {
-        return sourceNode.links.flatMap((link) => {
-          const source = nodeMap.get(sourceId);
-          const target = nodeMap.get(link.link);
-          if (!source || !target) return [];
-          return [{ source, target } as ForceLink];
-        });
-      }
-    );
-    const simulation = forceSimulation(nodes, 3)
-      .force("charge", forceManyBody().distanceMax(100))
-      .force("link", forceLink(links))
-      .force("center", forceCenter());
-    // simulation.on("tick", () => {
-    //   setLayout({ nodes, links });
-    // });
-    simulation.stop();
-    simulation.tick(100);
-    setLayout({ nodes, links, nodeMap });
+    return createSitegraphViewer(sitegraph);
   }, [sitegraph]);
 
-  const projector = (vec: Vec3) =>
-    project(
-      vec,
-      perspective,
-      layout.nodeMap.get("HomePage") || { x: 0, y: 0, z: 0 }
-    );
+  // const projector = (vec: Vec3) =>
+  //   project(
+  //     vec,
+  //     perspective,
+  //     layout.nodeMap.get("HomePage") || { x: 0, y: 0, z: 0 }
+  //   );
 
-  return (
-    <svg width={1920} height={1080} viewBox={"-960 -540 1920 1080"}>
-      <g stroke={"#8b8685"}>
-        {layout.links.map((forceLink) => {
-          const source = projector(forceLink.source);
-          const target = projector(forceLink.target);
-          return (
-            <line
-              key={`${forceLink.index}`}
-              x1={source.x}
-              y1={source.y}
-              x2={target.x}
-              y2={target.y}
-            />
-          );
-        })}
-      </g>
-      {layout.nodes.map((forceNode) => {
-        const id = forceNode.id;
-        const node = sitegraph.nodes[id];
-        const { x, y } = projector(forceNode);
-        if (!node) return null;
-        return <SitegraphNodeView key={id} id={id} node={node} x={x} y={y} />;
-      })}
-    </svg>
-  );
+  return <></>;
+  // return (
+  //   <svg width={1920} height={1080} viewBox={"-960 -540 1920 1080"}>
+  //     <g stroke={"#8b8685"}>
+  //       {layout.links.map((forceLink) => {
+  //         const source = projector(forceLink.source);
+  //         const target = projector(forceLink.target);
+  //         return (
+  //           <line
+  //             key={`${forceLink.index}`}
+  //             x1={source.x}
+  //             y1={source.y}
+  //             x2={target.x}
+  //             y2={target.y}
+  //           />
+  //         );
+  //       })}
+  //     </g>
+  //     {layout.nodes.map((forceNode) => {
+  //       const id = forceNode.id;
+  //       const node = sitegraph.nodes[id];
+  //       const { x, y } = projector(forceNode);
+  //       if (!node) return null;
+  //       return <SitegraphNodeView key={id} id={id} node={node} x={x} y={y} />;
+  //     })}
+  //   </svg>
+  // );
 }
 
-interface SitegraphNodeView {
-  id: string;
-  node: SitegraphNode;
-  x: number;
-  y: number;
-}
+// interface SitegraphNodeView {
+//   id: string;
+//   node: SitegraphNode;
+//   x: number;
+//   y: number;
+// }
 
-function SitegraphNodeView(props: SitegraphNodeView) {
-  const { id, x, y } = props;
-  return (
-    <g fill="#fff">
-      <circle cx={x} cy={y} r={3} />
-      {!id.startsWith("2") && (
-        <text x={x + 3} y={y + 10} font-size={10}>
-          {id}
-        </text>
-      )}
-    </g>
-  );
-}
+// function SitegraphNodeView(props: SitegraphNodeView) {
+//   const { id, x, y } = props;
+//   return (
+//     <g fill="#fff">
+//       <circle cx={x} cy={y} r={3} />
+//       {!id.startsWith("2") && (
+//         <text x={x + 3} y={y + 10} font-size={10}>
+//           {id}
+//         </text>
+//       )}
+//     </g>
+//   );
+// }
