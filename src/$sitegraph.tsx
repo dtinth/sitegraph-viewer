@@ -1,9 +1,11 @@
 import { Sitegraph } from "./Sitegraph";
 import { atom } from "nanostores";
+import { searchParams } from "./searchParams";
 
 export const $sitegraph = atom<Sitegraph | undefined>();
 fetch(
-  "https://htrqhjrmmqrqaccchyne.supabase.co/storage/v1/object/public/notes-public/index.graph.json"
+  searchParams.get("sitegraph") ||
+    "https://htrqhjrmmqrqaccchyne.supabase.co/storage/v1/object/public/notes-public/index.graph.json"
 )
   .then((r) => {
     if (!r.ok) {
