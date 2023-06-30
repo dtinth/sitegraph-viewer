@@ -48,7 +48,7 @@ export function updateNodeViewModel(
   } else {
     vm.tint = 0x8b8685;
     vm.zIndex = 0;
-    vm.showText = true;
+    vm.showText = false;
   }
 
   vm.scale = focused ? 2 : 1;
