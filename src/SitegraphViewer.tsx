@@ -23,13 +23,16 @@ import {
   createNodeViewModel,
   updateNodeViewModel,
 } from "./NodeViewModel";
+import { Vec3 } from "./Vec3";
 
 const $perspective = atom<Orbit>({ rotateX: 0, rotateY: 0 });
+const $focus = atom("HomePage");
+
 let target = { rotateX: 0, rotateY: 0 };
 window.addEventListener("mousemove", (e) => {
   target = {
-    rotateX: (e.clientY - window.innerHeight / 2) / 500,
-    rotateY: (e.clientX - window.innerWidth / 2) / 500,
+    rotateX: (e.clientY / window.innerHeight - 0.5) / 2,
+    rotateY: (e.clientX / window.innerWidth - 0.5) / 2,
   };
 });
 requestAnimationFrame(function loop() {
@@ -65,20 +68,29 @@ function createSitegraphViewer(sitegraph: Sitegraph) {
   rectangleTemplate.endFill();
 
   const layouter = createLayouter(sitegraph);
+
   const nodeViewModels = new Map<ForceNode, NodeViewModel>();
   const nodeViews = new Map<ForceNode, NodeView>();
   const linkViews = new Map<ForceLink, LinkView>();
+
+  const linkGroup = new PIXI.Container();
+  const nodeGroup = new PIXI.Container();
+  linkGroup.sortableChildren = true;
+  nodeGroup.sortableChildren = true;
+  app.stage.addChild(linkGroup);
+  app.stage.addChild(nodeGroup);
+
   for (const link of layouter.$layout.get().links) {
     const linkView: LinkView = createLinkView(rectangleTemplate.geometry);
     linkViews.set(link, linkView);
-    app.stage.addChild(linkView.group);
+    linkGroup.addChild(linkView.group);
   }
   for (const node of layouter.$layout.get().nodes) {
     const nodeViewModel = createNodeViewModel();
     const nodeView = createNodeView(circleTemplate, node);
     nodeViews.set(node, nodeView);
     nodeViewModels.set(node, nodeViewModel);
-    app.stage.addChild(nodeView.group);
+    nodeGroup.addChild(nodeView.group);
   }
 
   const update = () => {
@@ -87,11 +99,12 @@ function createSitegraphViewer(sitegraph: Sitegraph) {
 
     const layout = layouter.$layout.get();
     const projector: Projector = (vec) => {
-      const projected = project(
-        vec,
-        $perspective.get(),
-        layout.nodeMap.get("HomePage") || { x: 0, y: 0, z: 0 }
-      );
+      const focusTarget: Vec3 = layout.nodeMap.get($focus.get()) || {
+        x: 0,
+        y: 0,
+        z: 0,
+      };
+      const projected = project(vec, $perspective.get(), focusTarget);
       return projected;
     };
 
