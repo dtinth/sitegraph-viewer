@@ -25,26 +25,72 @@ import {
 } from "./NodeViewModel";
 import { Vec3 } from "./Vec3";
 
-const $perspective = atom<Orbit>({ rotateX: 0, rotateY: 0 });
 const $focus = atom("HomePage");
 
-let target = { rotateX: 0, rotateY: 0 };
-window.addEventListener("mousemove", (e) => {
-  target = {
-    rotateX: (e.clientY - window.innerHeight / 2) / 1000,
-    rotateY: (e.clientX - window.innerWidth / 2) / 1000,
-  };
-});
-requestAnimationFrame(function loop() {
-  const perspective = $perspective.get();
-  const dx = target.rotateX - perspective.rotateX;
-  const dy = target.rotateY - perspective.rotateY;
-  $perspective.set({
-    rotateX: perspective.rotateX + dx / 10,
-    rotateY: perspective.rotateY + dy / 10,
+// window.addEventListener("mousemove", (e) => {
+//   target = {
+//     rotateX: (e.clientY - window.innerHeight / 2) / 1000,
+//     rotateY: (e.clientX - window.innerWidth / 2) / 1000,
+//   };
+// });
+// requestAnimationFrame(function loop() {
+//   const perspective = $perspective.get();
+//   const dx = target.rotateX - perspective.rotateX;
+//   const dy = target.rotateY - perspective.rotateY;
+//   $perspective.set({
+//     rotateX: perspective.rotateX + dx / 10,
+//     rotateY: perspective.rotateY + dy / 10,
+//   });
+//   requestAnimationFrame(loop);
+// });
+
+function setupCamera(app: PIXI.Application) {
+  let hover: Orbit = { rotateX: 0, rotateY: 0 };
+  let drag: Orbit = { rotateX: 0, rotateY: 0 };
+  const $perspective = atom<Orbit>({ rotateX: 0, rotateY: 0 });
+  app.stage.interactive = true;
+  app.stage.interactiveChildren = false;
+  app.stage.hitArea = { contains: () => true };
+
+  app.stage.on("globalmousemove", (e) => {
+    hover = {
+      rotateX: (e.clientY - window.innerHeight / 2) / 1000,
+      rotateY: (e.clientX - window.innerWidth / 2) / 1000,
+    };
   });
-  requestAnimationFrame(loop);
-});
+
+  let dragging: { lastX: number; lastY: number; id: number } | null = null;
+  app.stage.on("pointerdown", (e) => {
+    dragging = { lastX: e.global.x, lastY: e.global.y, id: e.pointerId };
+  });
+  app.stage.on("globalpointermove", (e) => {
+    if (!dragging || e.pointerId !== dragging.id) return;
+    const { lastX, lastY } = dragging;
+    const dx = e.global.x - lastX;
+    const dy = e.global.y - lastY;
+    drag.rotateX += dy / 100;
+    drag.rotateY += dx / 100;
+    dragging.lastX = e.global.x;
+    dragging.lastY = e.global.y;
+  });
+  app.stage.on("pointerup", () => {
+    dragging = null;
+  });
+
+  app.ticker.add(() => {
+    const perspective = $perspective.get();
+    const tx = hover.rotateX + drag.rotateX;
+    const ty = hover.rotateY + drag.rotateY;
+    const dx = tx - perspective.rotateX;
+    const dy = ty - perspective.rotateY;
+    $perspective.set({
+      rotateX: perspective.rotateX + dx / 10,
+      rotateY: perspective.rotateY + dy / 10,
+    });
+  });
+  return { $perspective };
+}
+
 function createSitegraphViewer(sitegraph: Sitegraph) {
   let app = new PIXI.Application<HTMLCanvasElement>({
     resizeTo: window,
@@ -56,6 +102,8 @@ function createSitegraphViewer(sitegraph: Sitegraph) {
   app.view.style.position = "fixed";
   app.view.style.top = "0";
   app.view.style.left = "0";
+
+  const { $perspective } = setupCamera(app);
 
   const circleTemplate = new PIXI.Graphics();
   circleTemplate.beginFill(16777215);
