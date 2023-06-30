@@ -149,8 +149,10 @@ function createSitegraphViewer(sitegraph: Sitegraph) {
     linkGroup.addChild(linkView.group);
   }
   for (const node of layouter.$layout.get().nodes) {
+    const sitegraphNode = sitegraph.nodes[node.id];
     const nodeViewModel = createNodeViewModel();
-    const nodeView = createNodeView(circleTemplate, node);
+    const label = sitegraphNode.title || node.id;
+    const nodeView = createNodeView(circleTemplate, node, label);
     nodeViews.set(node, nodeView);
     nodeViewModels.set(node, nodeViewModel);
     nodeGroup.addChild(nodeView.group);

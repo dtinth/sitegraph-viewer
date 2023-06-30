@@ -9,14 +9,17 @@ export interface NodeView {
 }
 export function createNodeView(
   circleTemplate: PIXI.Graphics,
-  node: ForceNode
+  node: ForceNode,
+  label: string
 ): NodeView {
   const group = new PIXI.Container();
   const circle = new PIXI.Graphics(circleTemplate.geometry);
-  const text = new PIXI.Text(node.id, {
+  const text = new PIXI.Text(label, {
     fontFamily: "sans-serif",
     fontSize: 10,
     fill: 0xffffff,
+    wordWrap: true,
+    wordWrapWidth: 200,
   });
   text.x = 5;
   text.y = 2;
