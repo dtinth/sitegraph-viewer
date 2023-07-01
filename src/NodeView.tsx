@@ -16,7 +16,7 @@ export function createNodeView(
   const circle = new PIXI.Graphics(circleTemplate.geometry);
   const text = new PIXI.Text(label, {
     fontFamily: "sans-serif",
-    fontSize: 10,
+    fontSize: 12,
     fill: 0xffffff,
     wordWrap: true,
     wordWrapWidth: 200,
