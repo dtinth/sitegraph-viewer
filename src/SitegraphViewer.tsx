@@ -27,6 +27,7 @@ import {
 import { createPath, createPathFinder } from "./createPathFinder";
 import { searchParams } from "./searchParams";
 import { rotateX, rotateY } from "./Vec3";
+import { createApproacher } from "./createApproacher";
 
 const $focus = atom(searchParams.get("focus") || "HomePage");
 
@@ -192,33 +193,14 @@ function createSitegraphViewer(sitegraph: Sitegraph) {
         }
     );
     const $anchor = atom($focusTarget.get());
-    const follows = [
-      $focusTarget.get(),
-      $focusTarget.get(),
-      $focusTarget.get(),
-      $focusTarget.get(),
-      $focusTarget.get(),
-      $focusTarget.get(),
-      $focusTarget.get(),
-    ];
+    const approacher = createApproacher($anchor.get(), 1 / 3, 7);
     const update = () => {
       const focusTarget = $focusTarget.get();
       const anchor = $anchor.get();
-      follows[0] = focusTarget;
-      for (let i = 1; i < follows.length; i++) {
-        const dx = follows[i - 1].x - follows[i].x;
-        const dy = follows[i - 1].y - follows[i].y;
-        const dz = follows[i - 1].z - follows[i].z;
-        follows[i] = {
-          x: follows[i].x + dx / 3,
-          y: follows[i].y + dy / 3,
-          z: follows[i].z + dz / 3,
-        };
-      }
-      const last = follows[follows.length - 1];
-      const dx = last.x - anchor.x;
-      const dy = last.y - anchor.y;
-      const dz = last.z - anchor.z;
+      approacher.approach(focusTarget);
+      const dx = approacher.position.x - anchor.x;
+      const dy = approacher.position.y - anchor.y;
+      const dz = approacher.position.z - anchor.z;
       if (
         Math.abs(dx) > 0.0001 ||
         Math.abs(dy) > 0.0001 ||
