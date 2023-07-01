@@ -4,7 +4,7 @@ import { atom, computed } from "nanostores";
 import { useEffect } from "preact/hooks";
 import { ForceLink, ForceNode, createLayouter } from "./Layout";
 import { Orbit } from "./Orbit";
-import { Trackball, project, rotateX, rotateY } from "./project";
+import { Trackball, project } from "./project";
 import { Projector } from "./Projector";
 import {
   NodeView,
@@ -25,25 +25,33 @@ import {
 } from "./NodeViewModel";
 import { createPath, createPathFinder } from "./createPathFinder";
 import { searchParams } from "./searchParams";
+import { rotateX, rotateY } from "./Vec3";
 
 const $focus = atom(searchParams.get("focus") || "HomePage");
 
 Object.assign(window, { $focus });
 
 function setupCamera(app: PIXI.Application) {
-  let hover: Orbit = { rotateX: 0, rotateY: 0 };
+  /**
+   * When dragging (mousemove or touchmove), the trackball is updated.
+   * This causes all points to rotate around the focus point.
+   */
   const $trackball = atom<Trackball>({
     x: { x: 1, y: 0, z: 0 },
     y: { x: 0, y: 1, z: 0 },
     z: { x: 0, y: 0, z: 1 },
   });
-  const $perspective = atom<Orbit>({ rotateX: 0, rotateY: 0 });
+
+  /**
+   * When on a mouse-enabled device, the viewing angle is slightly adjusted.
+   */
+  const $orbit = atom<Orbit>({ rotateX: 0, rotateY: 0 });
+  let targetOrbit: Orbit = { rotateX: 0, rotateY: 0 };
   app.stage.interactive = true;
   app.stage.interactiveChildren = false;
   app.stage.hitArea = { contains: () => true };
-
   app.stage.on("globalmousemove", (e) => {
-    hover = {
+    targetOrbit = {
       rotateX: (e.clientY - window.innerHeight / 2) / 1000,
       rotateY: (e.clientX - window.innerWidth / 2) / 1000,
     };
@@ -72,19 +80,21 @@ function setupCamera(app: PIXI.Application) {
   });
 
   const update = () => {
-    const perspective = $perspective.get();
-    const tx = hover.rotateX;
-    const ty = hover.rotateY;
-    const dx = tx - perspective.rotateX;
-    const dy = ty - perspective.rotateY;
+    // Make the effective $orbit rotate towards the targetOrbit
+    const orbit = $orbit.get();
+    const tx = targetOrbit.rotateX;
+    const ty = targetOrbit.rotateY;
+    const dx = tx - orbit.rotateX;
+    const dy = ty - orbit.rotateY;
     if (Math.abs(dx) > 0.0001 || Math.abs(dy) > 0.0001) {
-      $perspective.set({
-        rotateX: perspective.rotateX + dx / 10,
-        rotateY: perspective.rotateY + dy / 10,
+      $orbit.set({
+        rotateX: orbit.rotateX + dx / 10,
+        rotateY: orbit.rotateY + dy / 10,
       });
     }
   };
-  return { $perspective, $trackball, update };
+
+  return { $orbit, $trackball, update };
 }
 
 function createSitegraphViewer(sitegraph: Sitegraph) {
@@ -261,7 +271,7 @@ function createSitegraphViewer(sitegraph: Sitegraph) {
           );
         } else if (clickAction?.includes("://")) {
           const url = new URL(clickGesture.id, clickAction);
-          window.open(url, "_blank");
+          location.href = `${url}`;
         } else {
           console.log("click", clickGesture.id);
           alert(`click ${clickGesture.id}`);
@@ -280,7 +290,7 @@ function createSitegraphViewer(sitegraph: Sitegraph) {
       $width,
       $height,
       layouter.$layout,
-      camera.$perspective,
+      camera.$orbit,
       camera.$trackball,
       $focus,
       focuser.$anchor,
@@ -294,7 +304,7 @@ function createSitegraphViewer(sitegraph: Sitegraph) {
       width,
       height,
       layout,
-      perspective,
+      orbit,
       trackball,
       focus,
       anchor,
@@ -313,7 +323,7 @@ function createSitegraphViewer(sitegraph: Sitegraph) {
         app.stage.y = height / 2;
 
         const projector: Projector = (vec) => {
-          const projected = project(vec, perspective, trackball, anchor);
+          const projected = project(vec, orbit, trackball, anchor);
           return projected;
         };
 
