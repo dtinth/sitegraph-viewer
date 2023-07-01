@@ -52,8 +52,8 @@ function setupCamera(app: PIXI.Application) {
   app.stage.hitArea = { contains: () => true };
   app.stage.on("globalmousemove", (e) => {
     targetOrbit = {
-      rotateX: (e.clientY - window.innerHeight / 2) / 1000,
-      rotateY: (e.clientX - window.innerWidth / 2) / 1000,
+      rotateX: (e.clientY - window.innerHeight / 2) / 2048,
+      rotateY: (e.clientX - window.innerWidth / 2) / 2048,
     };
   });
 
