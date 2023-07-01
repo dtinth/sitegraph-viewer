@@ -59,9 +59,9 @@ function setupCamera(app: PIXI.Application) {
     const dy = e.global.y - lastY;
     const trackball = $trackball.get();
     $trackball.set({
-      x: rotateX(rotateY(trackball.x, dx / 100), dy / 100),
-      y: rotateX(rotateY(trackball.y, dx / 100), dy / 100),
-      z: rotateX(rotateY(trackball.z, dx / 100), dy / 100),
+      x: rotateX(rotateY(trackball.x, dx / 128), dy / 128),
+      y: rotateX(rotateY(trackball.y, dx / 128), dy / 128),
+      z: rotateX(rotateY(trackball.z, dx / 128), dy / 128),
     });
     dragging.lastX = e.global.x;
     dragging.lastY = e.global.y;
@@ -178,21 +178,42 @@ function createSitegraphViewer(sitegraph: Sitegraph) {
         }
     );
     const $anchor = atom($focusTarget.get());
+    const follows = [
+      $focusTarget.get(),
+      $focusTarget.get(),
+      $focusTarget.get(),
+      $focusTarget.get(),
+      $focusTarget.get(),
+      $focusTarget.get(),
+      $focusTarget.get(),
+    ];
     const update = () => {
       const focusTarget = $focusTarget.get();
       const anchor = $anchor.get();
-      const dx = focusTarget.x - anchor.x;
-      const dy = focusTarget.y - anchor.y;
-      const dz = focusTarget.z - anchor.z;
+      follows[0] = focusTarget;
+      for (let i = 1; i < follows.length; i++) {
+        const dx = follows[i - 1].x - follows[i].x;
+        const dy = follows[i - 1].y - follows[i].y;
+        const dz = follows[i - 1].z - follows[i].z;
+        follows[i] = {
+          x: follows[i].x + dx / 3,
+          y: follows[i].y + dy / 3,
+          z: follows[i].z + dz / 3,
+        };
+      }
+      const last = follows[follows.length - 1];
+      const dx = last.x - anchor.x;
+      const dy = last.y - anchor.y;
+      const dz = last.z - anchor.z;
       if (
         Math.abs(dx) > 0.0001 ||
         Math.abs(dy) > 0.0001 ||
         Math.abs(dz) > 0.0001
       ) {
         $anchor.set({
-          x: anchor.x + dx / 10,
-          y: anchor.y + dy / 10,
-          z: anchor.z + dz / 10,
+          x: anchor.x + dx,
+          y: anchor.y + dy,
+          z: anchor.z + dz,
         });
       }
     };
