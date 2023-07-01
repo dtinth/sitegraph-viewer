@@ -256,7 +256,7 @@ function createSitegraphViewer(sitegraph: Sitegraph) {
       if ($focus.get() === clickGesture.id) {
         if (clickAction === "parent.postMessage") {
           window.parent.postMessage(
-            { sitegraphClicked: { id: clickGesture.id } },
+            { sitegraphNodeClicked: { id: clickGesture.id } },
             "*"
           );
         } else if (clickAction?.includes("://")) {
