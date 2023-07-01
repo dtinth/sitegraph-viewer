@@ -48,8 +48,7 @@ function setupCamera(app: PIXI.Application) {
    */
   const $orbit = atom<Orbit>({ rotateX: 0, rotateY: 0 });
   let targetOrbit: Orbit = { rotateX: 0, rotateY: 0 };
-  app.stage.interactive = true;
-  app.stage.interactiveChildren = false;
+  app.stage.eventMode = "static";
   app.stage.hitArea = { contains: () => true };
   app.stage.on("globalmousemove", (e) => {
     targetOrbit = {
