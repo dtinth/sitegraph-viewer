@@ -23,7 +23,7 @@ export function updateNodeViewModel(
   forwardLinks: Set<string>,
   backLinks: Set<string>
 ) {
-  const vec = projector(node);
+  const vec = projector(node.displayPos);
   vm.x = vec.x;
   vm.y = vec.y;
 

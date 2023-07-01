@@ -6,6 +6,11 @@ import { SitegraphViewer } from "./SitegraphViewer";
 
 export function App() {
   const sitegraph = useStore($sitegraph);
-  if (!sitegraph) return <></>;
+  if (!sitegraph)
+    return (
+      <div id="loading">
+        <span>Loading sitegraph…</span>
+      </div>
+    );
   return <SitegraphViewer sitegraph={sitegraph} />;
 }

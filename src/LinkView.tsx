@@ -30,8 +30,8 @@ export function updateLinkView(
   const target = link.target;
   if (!source || !target) return;
   const { group, rectangle } = linkView;
-  const projectedSource = projector(source);
-  const projectedTarget = projector(target);
+  const projectedSource = projector(source.displayPos);
+  const projectedTarget = projector(target.displayPos);
   const dx = projectedTarget.x - projectedSource.x;
   const dy = projectedTarget.y - projectedSource.y;
   const angle = Math.atan2(dy, dx);

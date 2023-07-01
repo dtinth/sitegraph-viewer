@@ -24,6 +24,7 @@ import {
   updateNodeViewModel,
 } from "./NodeViewModel";
 import { createPath, createPathFinder } from "./createPathFinder";
+import { searchParams } from "./searchParams";
 
 const $focus = atom("HomePage");
 
@@ -248,9 +249,20 @@ function createSitegraphViewer(sitegraph: Sitegraph) {
       clickGesture.pointerId === e.pointerId &&
       Math.hypot(e.global.x - clickGesture.x, e.global.y - clickGesture.y) < 10
     ) {
+      const clickAction = searchParams.get("click");
       if ($focus.get() === clickGesture.id) {
-        const url = "https://notes.dt.in.th/" + clickGesture.id;
-        window.open(url, "_blank");
+        if (clickAction === "parent.postMessage") {
+          window.parent.postMessage(
+            { sitegraphClicked: { id: clickGesture.id } },
+            "*"
+          );
+        } else if (clickAction?.includes("://")) {
+          const url = new URL(clickGesture.id, clickAction);
+          window.open(url, "_blank");
+        } else {
+          console.log("click", clickGesture.id);
+          alert(`click ${clickGesture.id}`);
+        }
       } else {
         $focus.set(clickGesture.id);
       }
@@ -258,7 +270,7 @@ function createSitegraphViewer(sitegraph: Sitegraph) {
     clickGesture = undefined;
   });
 
-  $hoverNodeId.subscribe((x) => console.log("hoverNodeId", x));
+  // $hoverNodeId.subscribe((x) => console.log("hoverNodeId", x));
 
   const $update = computed(
     [
@@ -348,6 +360,7 @@ function createSitegraphViewer(sitegraph: Sitegraph) {
   const update = () => {
     let dirty = false;
     const markDirty = () => (dirty = true);
+    layouter.update();
     camera.update();
     focuser.update();
     $width.set(window.innerWidth);
