@@ -88,7 +88,10 @@ function setupCamera(app: PIXI.Application) {
 }
 
 function createSitegraphViewer(sitegraph: Sitegraph) {
-  const fromHome = createPathFinder(sitegraph, "HomePage");
+  const fromHome = createPathFinder(
+    sitegraph,
+    searchParams.get("root") || "HomePage"
+  );
 
   const $hoverNodeId = atom<string | undefined>($focus.get());
   const $pathFinderFromFocus = computed($focus, (focus) =>
