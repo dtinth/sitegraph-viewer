@@ -63,9 +63,6 @@ export function createLayouter(sitegraph: Sitegraph) {
 
   const createLayout = () => ({ nodes, links, nodeMap });
   const $layout = atom(createLayout());
-  simulation.on("tick", () => {
-    $layout.set(createLayout());
-  });
   let ticksLeft = 300;
   const update = () => {
     if (ticksLeft <= 0) return;
@@ -79,6 +76,7 @@ export function createLayouter(sitegraph: Sitegraph) {
       node.displayPos.y += dy / 16;
       node.displayPos.z += dz / 16;
     }
+    $layout.set(createLayout());
   };
 
   return { $layout, update };

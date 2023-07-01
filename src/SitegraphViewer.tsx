@@ -26,7 +26,7 @@ import {
 import { createPath, createPathFinder } from "./createPathFinder";
 import { searchParams } from "./searchParams";
 
-const $focus = atom("HomePage");
+const $focus = atom(searchParams.get("focus") || "HomePage");
 
 Object.assign(window, { $focus });
 

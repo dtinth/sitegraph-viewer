@@ -20,6 +20,7 @@ export function createPathFinder(sitegraph: Sitegraph, startingNodeId: string) {
   while (queue.length > 0) {
     const nodeId = queue.shift()!;
     const node = sitegraph.nodes[nodeId];
+    if (!node) continue;
     const pathToNode = bestPathTo.get(nodeId)!;
     for (const link of node.links) {
       const neighborId = link.link;
