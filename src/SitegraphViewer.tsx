@@ -1,6 +1,7 @@
 import { Sitegraph } from "./Sitegraph";
 import * as PIXI from "pixi.js";
 import { atom, computed } from "nanostores";
+import { computedDynamic } from "nanostores-computed-dynamic";
 import { useEffect } from "preact/hooks";
 import { ForceLink, ForceNode, createLayouter } from "./Layout";
 import { Orbit } from "./Orbit";
@@ -285,90 +286,74 @@ function createSitegraphViewer(sitegraph: Sitegraph) {
 
   // $hoverNodeId.subscribe((x) => console.log("hoverNodeId", x));
 
-  const $update = computed(
-    [
-      $width,
-      $height,
-      layouter.$layout,
-      camera.$orbit,
-      camera.$trackball,
-      $focus,
-      focuser.$anchor,
-      $pathFromHomeToFocus,
-      $pathFromFocusToHover,
-      $hoverNodeId,
-      $forwardLinks,
-      $backLinks,
-    ],
-    (
-      width,
-      height,
-      layout,
-      orbit,
-      trackball,
-      focus,
-      anchor,
-      pathFromHomeToFocus,
-      pathFromFocusToHover,
-      hoverNodeId,
-      forwardLinks,
-      backLinks
-    ) => {
-      let ran = false;
-      return (markDirty: () => void) => {
-        if (ran) return;
-        ran = true;
+  const $update = computedDynamic((use) => {
+    const width = use($width);
+    const height = use($height);
+    const layout = use(layouter.$layout);
+    const orbit = use(camera.$orbit);
+    const trackball = use(camera.$trackball);
+    const focus = use($focus);
+    const anchor = use(focuser.$anchor);
+    const pathFromHomeToFocus = use($pathFromHomeToFocus);
+    const pathFromFocusToHover = use($pathFromFocusToHover);
+    const hoverNodeId = use($hoverNodeId);
+    const forwardLinks = use($forwardLinks);
+    const backLinks = use($backLinks);
 
-        app.stage.x = width / 2;
-        app.stage.y = height / 2;
+    let ran = false;
+    return (markDirty: () => void) => {
+      if (ran) return;
+      ran = true;
 
-        const projector: Projector = (vec) => {
-          const projected = project(vec, orbit, trackball, anchor);
-          return projected;
-        };
+      app.stage.x = width / 2;
+      app.stage.y = height / 2;
 
-        for (const node of layout.nodes) {
-          const nodeViewModel = nodeViewModels.get(node);
-          if (!nodeViewModel) continue;
-          updateNodeViewModel(
-            nodeViewModel,
-            node,
-            projector,
-            focus,
-            hoverNodeId,
-            pathFromHomeToFocus,
-            pathFromFocusToHover,
-            forwardLinks,
-            backLinks
-          );
-        }
-
-        for (const link of layout.links) {
-          const linkView = linkViews.get(link);
-          if (!linkView) continue;
-          updateLinkView(
-            linkView,
-            link,
-            projector,
-            pathFromHomeToFocus,
-            pathFromFocusToHover,
-            focus,
-            forwardLinks,
-            backLinks
-          );
-        }
-
-        for (const node of layout.nodes) {
-          const nodeView = nodeViews.get(node);
-          const nodeViewModel = nodeViewModels.get(node);
-          if (!nodeView || !nodeViewModel) continue;
-          updateNodeView(nodeView, nodeViewModel);
-        }
-
-        markDirty();
+      const projector: Projector = (vec) => {
+        const projected = project(vec, orbit, trackball, anchor);
+        return projected;
       };
-    }
-  );
+
+      for (const node of layout.nodes) {
+        const nodeViewModel = nodeViewModels.get(node);
+        if (!nodeViewModel) continue;
+        updateNodeViewModel(
+          nodeViewModel,
+          node,
+          projector,
+          focus,
+          hoverNodeId,
+          pathFromHomeToFocus,
+          pathFromFocusToHover,
+          forwardLinks,
+          backLinks
+        );
+      }
+
+      for (const link of layout.links) {
+        const linkView = linkViews.get(link);
+        if (!linkView) continue;
+        updateLinkView(
+          linkView,
+          link,
+          projector,
+          pathFromHomeToFocus,
+          pathFromFocusToHover,
+          focus,
+          forwardLinks,
+          backLinks
+        );
+      }
+
+      for (const node of layout.nodes) {
+        const nodeView = nodeViews.get(node);
+        const nodeViewModel = nodeViewModels.get(node);
+        if (!nodeView || !nodeViewModel) continue;
+        updateNodeView(nodeView, nodeViewModel);
+      }
+
+      markDirty();
+    };
+  });
 
   const update = () => {
     let dirty = false;

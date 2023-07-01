@@ -10,7 +10,11 @@ export default defineConfig({
         manualChunks: {
           d3: ["d3-force-3d"],
           preact: ["preact"],
-          nanostores: ["nanostores", "@nanostores/preact"],
+          nanostores: [
+            "nanostores",
+            "@nanostores/preact",
+            "nanostores-computed-dynamic",
+          ],
           pixi: ["pixi.js"],
           zod: ["zod"],
         },
