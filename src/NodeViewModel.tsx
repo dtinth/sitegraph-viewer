@@ -6,11 +6,20 @@ import { Path } from "./createPathFinder";
 export interface NodeViewModel extends Vec2 {
   tint: number;
   zIndex: number;
+  hoverZIndex: number;
   showText: boolean;
   scale: number;
 }
 export function createNodeViewModel(): NodeViewModel {
-  return { x: 0, y: 0, tint: 0xffffff, zIndex: 0, showText: false, scale: 1 };
+  return {
+    x: 0,
+    y: 0,
+    tint: 0xffffff,
+    zIndex: 0,
+    hoverZIndex: 0,
+    showText: false,
+    scale: 1,
+  };
 }
 export function updateNodeViewModel(
   vm: NodeViewModel,
@@ -49,6 +58,17 @@ export function updateNodeViewModel(
     vm.tint = 0x8b8685;
     vm.zIndex = 0;
     vm.showText = false;
+  }
+  if (focused) {
+    vm.hoverZIndex = 1;
+  } else if (pathFromHome.hasNode(node.id)) {
+    vm.hoverZIndex = 1;
+  } else if (forwardLinks.has(node.id)) {
+    vm.hoverZIndex = 1;
+  } else if (backLinks.has(node.id)) {
+    vm.hoverZIndex = 1;
+  } else {
+    vm.hoverZIndex = 0;
   }
 
   vm.scale = focused ? 2 : 1;

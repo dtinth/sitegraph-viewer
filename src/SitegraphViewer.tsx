@@ -370,14 +370,19 @@ function createSitegraphViewer(sitegraph: Sitegraph) {
   };
 
   function updateHover(e: PIXI.FederatedPointerEvent) {
-    let closest: { id: string; distance: number } | undefined;
+    let closest: { id: string; distance: number; zIndex: number } | undefined;
     for (const [node, vm] of nodeViewModels) {
       const distance = Math.hypot(
         e.global.x - $width.get() / 2 - vm.x,
         e.global.y - $height.get() / 2 - vm.y
       );
-      if (distance < 32 && (!closest || distance < closest.distance)) {
-        closest = { id: node.id, distance };
+      if (
+        distance < 32 &&
+        (!closest ||
+          vm.hoverZIndex > closest.zIndex ||
+          (vm.hoverZIndex === closest.zIndex && distance < closest.distance))
+      ) {
+        closest = { id: node.id, distance, zIndex: vm.hoverZIndex };
       }
     }
     if (closest !== undefined) {
