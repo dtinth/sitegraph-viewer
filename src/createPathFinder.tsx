@@ -17,7 +17,13 @@ export function createPathFinder(sitegraph: Sitegraph, startingNodeId: string) {
   const queue: string[] = [];
   queue.push(startingNodeId);
   bestPathTo.set(startingNodeId, { cost: 0, nodes: [startingNodeId] });
+  const costTo = (nodeId: string) => bestPathTo.get(nodeId)?.cost ?? Infinity;
+  let dirty = false;
   while (queue.length > 0) {
+    if (dirty) {
+      queue.sort((a, b) => costTo(a) - costTo(b));
+      dirty = false;
+    }
     const nodeId = queue.shift()!;
     const node = sitegraph.nodes[nodeId];
     if (!node) continue;
@@ -36,6 +42,7 @@ export function createPathFinder(sitegraph: Sitegraph, startingNodeId: string) {
         nodes: [...pathToNode.nodes, neighborId],
       });
       queue.push(neighborId);
+      dirty = true;
     }
   }
   return {
