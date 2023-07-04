@@ -16,7 +16,7 @@ The website is expected to publish a `sitegraph.json` file. The schema for this 
 
 To use this app with your own sitegraph, first make sure your sitegraph URL is CORS-enabled. Then, configure the app with these query params:
 
-<table>
+<table width="100%">
 <thead><tr><th>Param</th><th>Description</th></tr></thead>
 <tbody>
 <tr><td><code>sitegraph</code></td><td>
