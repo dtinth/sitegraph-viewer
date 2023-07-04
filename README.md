@@ -46,11 +46,9 @@ The _best path_ is the path from A to B with minimum total cost. The cost of a p
 
 Specify what happens when a focused node is clicked.
 
-| Value                | Description                                                                                                                    |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `alert`              | Display an alert with the page ID. For debugging.                                                                              |
-| `parent.postMessage` | Send a message to the parent frame. The message will be a JSON object with this structure: `{ sitegraphNodeClicked: { id } }`. |
-| `*://*`              | Navigate to the page ID with the specified value as the base URL.                                                              |
+- `alert` Display an alert with the page ID. For debugging.
+- `parent.postMessage` Send a message to the parent frame. The message will be a JSON object with this structure: `{ sitegraphNodeClicked: { id } }`.
+- `*://*` Navigate to the page ID with the specified value as the base URL.
 
 **Default:** `alert`
 
