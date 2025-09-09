@@ -5,7 +5,7 @@ import { searchParams } from "./searchParams";
 export const $sitegraph = atom<Sitegraph | undefined>();
 const source =
   searchParams.get("sitegraph") ||
-  "https://notes.dt.in.th/api/sitegraph.json";
+  "https://dt.in.th/api/sitegraph.json";
 
 if (source.includes("://")) {
   fetch(source)
